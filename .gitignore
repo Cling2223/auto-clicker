@@ -1,0 +1,15 @@
+# Build output that can be regenerated locally.
+bin/Debug/
+tests/bin/
+obj/
+
+# Local IDE and OS files.
+.vs/
+*.user
+*.suo
+Thumbs.db
+Desktop.ini
+
+# Local sharing/staging folders.
+分享包/
+分享包检查/
