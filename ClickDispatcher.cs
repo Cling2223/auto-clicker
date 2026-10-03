@@ -109,17 +109,10 @@ namespace LightweightAutoClicker
                 return false;
             }
 
-            string devices;
-            if (!TryRun(adbPath, "devices", out devices))
+            string serial;
+            if (!TryGetOnlineDeviceSerial(adbPath, out serial))
             {
-                error = "MuMu ADB did not respond.";
-                return false;
-            }
-
-            string serial = FindDeviceSerial(devices);
-            if (serial == null)
-            {
-                error = "No online MuMu Android device was found.";
+                error = "MuMu 已启动，但 Android 调试设备未就绪。请等待 MuMu 完全启动后重试。";
                 return false;
             }
 
@@ -289,6 +282,35 @@ namespace LightweightAutoClicker
                     return serial;
             }
             return matches.Count == 0 ? null : matches[0].Groups["serial"].Value;
+        }
+
+        private static bool TryGetOnlineDeviceSerial(string adbPath, out string serial)
+        {
+            serial = null;
+            string devices;
+            if (!TryRun(adbPath, "devices", out devices))
+                return false;
+
+            serial = FindDeviceSerial(devices);
+            if (serial != null)
+                return true;
+
+            // MuMu may leave its local ADB endpoint disconnected after this tool restarts.
+            // Reconnect to the common MuMu endpoints, then inspect the refreshed device list.
+            string[] endpoints = { "127.0.0.1:5555", "127.0.0.1:16384", "127.0.0.1:7555" };
+            foreach (string endpoint in endpoints)
+            {
+                string ignored;
+                TryRun(adbPath, "connect " + endpoint, out ignored);
+
+                if (!TryRun(adbPath, "devices", out devices))
+                    continue;
+
+                serial = FindDeviceSerial(devices);
+                if (serial != null)
+                    return true;
+            }
+            return false;
         }
 
         private static bool TryFindFocusedDisplay(string dumpsys, out int displayId, out int width, out int height)
